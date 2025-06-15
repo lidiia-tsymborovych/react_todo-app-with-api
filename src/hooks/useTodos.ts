@@ -54,8 +54,10 @@ export const useTodos = () => {
   }, []);
 
   const handleAddTodo = async (newTodo: TodoAgregate) => {
-    handleAddTodoToProcessing(0);
-    setTempTodo({ id: 0, ...newTodo });
+    const TEMP_ID = 0;
+
+    handleAddTodoToProcessing(TEMP_ID);
+    setTempTodo({ id: TEMP_ID, ...newTodo });
 
     try {
       const createdTodo = await addTodo(newTodo);
@@ -67,7 +69,7 @@ export const useTodos = () => {
       throw error;
     } finally {
       setTempTodo(null);
-      handleRemoveTodoFromProcessing(0);
+      handleRemoveTodoFromProcessing(TEMP_ID);
     }
   };
 
@@ -129,6 +131,7 @@ export const useTodos = () => {
       );
     } catch (error) {
       handleErrors(error, TodoServiceErrors.UnableToUpdate);
+      throw error;
     } finally {
       handleRemoveTodoFromProcessing(todoId);
     }
@@ -166,7 +169,7 @@ export const useTodos = () => {
     }
   };
 
-  const clearCompleted = async () => {
+  const handleClearCompleted = async () => {
     const todosToRemove = todos.filter(todo => todo.completed);
 
     todosToRemove.forEach(({ id }) => handleAddTodoToProcessing(id));
@@ -175,13 +178,11 @@ export const useTodos = () => {
       todosToRemove.map(todo => deleteTodo(todo.id)),
     );
 
-    const successfulIds: number[] = [];
-
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        successfulIds.push(todosToRemove[index].id);
-      }
-    });
+    const successfulIds = results
+      .map((result, index) =>
+        result.status === 'fulfilled' ? todosToRemove[index].id : null,
+      )
+      .filter((id): id is number => id !== null);
 
     setTodos(current =>
       current.filter(todo => !successfulIds.includes(todo.id)),
@@ -192,10 +193,6 @@ export const useTodos = () => {
     }
 
     todosToRemove.forEach(({ id }) => handleRemoveTodoFromProcessing(id));
-  };
-
-  const handleClearCompleted = async () => {
-    await clearCompleted();
     inputFocusRef.current?.();
   };
 

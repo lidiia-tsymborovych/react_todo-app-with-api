@@ -2,28 +2,91 @@
 import cn from 'classnames';
 import { Todo } from '../../types/Todo';
 import React, { useEffect, useRef, useState } from 'react';
+import { TodoError, TodoServiceErrors } from '../../types/Errors';
 
 type TodoItemProps = {
   todo: Todo;
-  onDelete?: (todoId: Todo['id']) => Promise<void>;
   isLoading: boolean;
-  onToggle?: (todoId: Todo['id']) => Promise<void>;
-  onUpdate?: (todoId: Todo['id'], newTitle: string) => Promise<void>;
+  onDelete: (todoId: Todo['id']) => Promise<void>;
+  onToggle: (todoId: Todo['id']) => Promise<void>;
+  onUpdate: (todoId: Todo['id'], newTitle: string) => Promise<void>;
+  setError: React.Dispatch<React.SetStateAction<TodoError | null>>;
+  nodeRef: React.RefObject<HTMLDivElement>;
 };
 
 const TodoItemComponent = ({
   todo,
-  onDelete,
   isLoading,
+  onDelete,
   onToggle,
   onUpdate,
+  setError,
+  nodeRef,
 }: TodoItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [updatedTitle, setUpdatedTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const skipBlurRef = useRef(false);
 
-  const handleDelete = () => {
-    onDelete?.(todo.id);
+  const handleDelete = async () => {
+    try {
+      await onDelete(todo.id);
+      setIsEditing(false);
+    } catch {
+      setError?.(TodoServiceErrors.UnableToDelete);
+    }
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setUpdatedTitle(event.target.value);
+  };
+
+  const handleFinishEditing = async (title: string) => {
+    const trimmed = title.trim();
+
+    if (!trimmed) {
+      await handleDelete();
+
+      return;
+    }
+
+    if (trimmed === todo.title) {
+      setIsEditing(false);
+
+      return;
+    }
+
+    try {
+      await onUpdate(todo.id, trimmed);
+      setIsEditing(false);
+    } catch {
+      setError?.(TodoServiceErrors.UnableToUpdate);
+    }
+  };
+
+  const handleKeyDown = async (
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      skipBlurRef.current = true;
+      await handleFinishEditing(updatedTitle);
+    }
+
+    if (event.key === 'Escape') {
+      setIsEditing(false);
+      setUpdatedTitle(todo.title);
+    }
+  };
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    if (skipBlurRef.current) {
+      skipBlurRef.current = false;
+
+      return;
+    }
+
+    handleFinishEditing(event.currentTarget.value);
   };
 
   useEffect(() => {
@@ -33,50 +96,11 @@ const TodoItemComponent = ({
     }
   }, [isEditing, todo.title]);
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setUpdatedTitle(event.target.value);
-  };
-
-  const handleFinishEditing = async () => {
-    const trimmed = updatedTitle.trim();
-
-    if (!trimmed) {
-      handleDelete();
-    } else if (trimmed !== todo.title) {
-      if (onUpdate) {
-        await onUpdate(todo.id, trimmed);
-      }
-    }
-
-    setIsEditing(false);
-  };
-
-  const handleSubmitEditing = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-    await handleFinishEditing();
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsEditing(false);
-        setUpdatedTitle(todo.title);
-      }
-    };
-
-    if (isEditing) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, todo.title]);
-
   return (
     <div
+      ref={nodeRef}
       data-cy="Todo"
-      className={cn('todo', 'item-enter-done', {
+      className={cn('todo', {
         completed: todo.completed,
       })}
     >
@@ -91,18 +115,17 @@ const TodoItemComponent = ({
       </label>
 
       {isEditing ? (
-        <form onSubmit={handleSubmitEditing}>
-          <input
-            ref={inputRef}
-            data-cy="TodoTitleField"
-            type="text"
-            className="todo__title-field"
-            placeholder="Empty todo will be deleted"
-            value={updatedTitle}
-            onChange={handleInputChange}
-            onBlur={handleFinishEditing}
-          />
-        </form>
+        <input
+          ref={inputRef}
+          data-cy="TodoTitleField"
+          type="text"
+          className="todo__title-field"
+          placeholder="Empty todo will be deleted"
+          value={updatedTitle}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+        />
       ) : (
         <span
           data-cy="TodoTitle"

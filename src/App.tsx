@@ -9,6 +9,7 @@ import { TodoForm } from './components/TodoForm/TodoForm';
 import { TodoFooterNav } from './components/TodoFooterNav/TodoFooterNav';
 import { ClearCompletedBtn } from './components/ClearCompletedBtn';
 import { TodoItem } from './components/TodoItem';
+import React, { useRef } from 'react';
 
 export const App: React.FC = () => {
   const {
@@ -35,6 +36,18 @@ export const App: React.FC = () => {
   const resetError = () => setErrorMessage(null);
   const todoListIsNotEmpty = todos.length > 0;
   const loading = (id: number) => processingTodoIds.includes(id);
+
+  const nodeRefs = useRef(new Map<number, React.RefObject<HTMLDivElement>>());
+
+  const getNodeRef = (id: number) => {
+    if (!nodeRefs.current.has(id)) {
+      nodeRefs.current.set(id, React.createRef<HTMLDivElement>());
+    }
+
+    return nodeRefs.current.get(id)!;
+  };
+
+  const tempNodeRef = useRef<HTMLDivElement>(null);
 
   if (!USER_ID) {
     return <UserWarning />;
@@ -70,13 +83,16 @@ export const App: React.FC = () => {
                   timeout={300}
                   classNames="item"
                   appear
+                  nodeRef={getNodeRef(todo.id)}
                 >
                   <TodoItem
                     todo={todo}
-                    onDelete={handleDeleteTodo}
                     isLoading={loading(todo.id)}
+                    onDelete={handleDeleteTodo}
                     onToggle={handleToggleTodo}
                     onUpdate={handleUpdateTodo}
+                    setError={setErrorMessage}
+                    nodeRef={getNodeRef(todo.id)}
                   />
                 </CSSTransition>
               ))}
@@ -86,8 +102,17 @@ export const App: React.FC = () => {
                   timeout={300}
                   classNames="temp-item"
                   appear
+                  nodeRef={tempNodeRef}
                 >
-                  <TodoItem todo={tempTodo} isLoading={true} />
+                  <TodoItem
+                    todo={tempTodo}
+                    isLoading={true}
+                    onDelete={handleDeleteTodo}
+                    onToggle={handleToggleTodo}
+                    onUpdate={handleUpdateTodo}
+                    setError={setErrorMessage}
+                    nodeRef={tempNodeRef}
+                  />
                 </CSSTransition>
               )}
             </TransitionGroup>
