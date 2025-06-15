@@ -22,6 +22,7 @@ export const App: React.FC = () => {
     processingTodoIds,
     tempTodo,
     inputFocusRef,
+    TEMP_ID,
     setErrorMessage,
     handleDeleteTodo,
     handleAddTodo,
@@ -69,7 +70,7 @@ export const App: React.FC = () => {
           <TodoForm
             onSubmit={handleAddTodo}
             setErrorMessage={setErrorMessage}
-            isLoading={loading(0)}
+            isLoading={loading(TEMP_ID)}
             inputFocusRef={inputFocusRef}
           />
         </header>
@@ -138,11 +139,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      <ErrorNotification
-        errorMessage={errorMessage}
-        onClose={resetError}
-        setError={setErrorMessage}
-      />
+      <ErrorNotification errorMessage={errorMessage} onClose={resetError} />
     </div>
   );
 };

@@ -5,13 +5,11 @@ import { TodoError } from '../../types/Errors';
 type Props = {
   errorMessage: TodoError | null;
   onClose: () => void;
-  setError: (value: TodoError | null) => void;
 };
 
 export const ErrorNotification: React.FC<Props> = ({
   errorMessage,
   onClose,
-  setError,
 }) => {
   const ERROR_DURATION = 3000;
 
@@ -21,11 +19,11 @@ export const ErrorNotification: React.FC<Props> = ({
     }
 
     const timerId = setTimeout(() => {
-      setError(null);
+      onClose();
     }, ERROR_DURATION);
 
     return () => clearTimeout(timerId);
-  }, [errorMessage, setError]);
+  }, [errorMessage, onClose]);
 
   return (
     <div

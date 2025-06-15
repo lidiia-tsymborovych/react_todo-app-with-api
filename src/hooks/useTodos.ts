@@ -3,6 +3,7 @@ import { Todo } from '../types/Todo';
 import { addTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 import { TodoError, TodoServiceErrors } from '../types/Errors';
 import { TodoAgregate } from '../types/TodoAgregate';
+import { getSuccessfulIds } from '../utils/getSuccessfulIds';
 
 export const useTodos = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -12,16 +13,21 @@ export const useTodos = () => {
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const inputFocusRef = useRef<() => void>(() => {});
 
-  const allTodosCompleted = useMemo(() => {
-    return todos.every(todo => todo.completed);
-  }, [todos]);
-  const itemsLeft = useMemo(() => {
-    return todos.filter(todo => !todo.completed).length;
-  }, [todos]);
+  const TEMP_ID = 0;
 
-  const hasCompletedTodos = useMemo(() => {
-    return todos.some(todo => todo.completed);
-  }, [todos]);
+  const allTodosCompleted = useMemo(
+    () => todos.every(todo => todo.completed),
+    [todos],
+  );
+  const itemsLeft = useMemo(
+    () => todos.filter(todo => !todo.completed).length,
+    [todos],
+  );
+
+  const hasCompletedTodos = useMemo(
+    () => todos.some(todo => todo.completed),
+    [todos],
+  );
 
   const handleAddTodoToProcessing = (todoId: Todo['id']) => {
     setProcessingTodoIds(current => [...current, todoId]);
@@ -29,6 +35,12 @@ export const useTodos = () => {
 
   const handleRemoveTodoFromProcessing = (todoId: Todo['id']) => {
     setProcessingTodoIds(current => current.filter(id => id !== todoId));
+  };
+
+  const replaceTodoInList = (updated: Todo) => {
+    setTodos(current =>
+      current.map(todo => (todo.id === updated.id ? updated : todo)),
+    );
   };
 
   const handleErrors = useCallback(
@@ -44,18 +56,25 @@ export const useTodos = () => {
     [],
   );
 
-  useEffect(() => {
+  const loadTodos = useCallback(async () => {
     setInitialLoading(true);
     setErrorMessage(null);
-    getTodos()
-      .then(setTodos)
-      .catch(() => setErrorMessage(TodoServiceErrors.UnableToLoad))
-      .finally(() => setInitialLoading(false));
+    try {
+      const loadedTodos = await getTodos();
+
+      setTodos(loadedTodos);
+    } catch {
+      setErrorMessage(TodoServiceErrors.UnableToLoad);
+    } finally {
+      setInitialLoading(false);
+    }
   }, []);
 
-  const handleAddTodo = async (newTodo: TodoAgregate) => {
-    const TEMP_ID = 0;
+  useEffect(() => {
+    loadTodos();
+  }, [loadTodos]);
 
+  const handleAddTodo = async (newTodo: TodoAgregate) => {
     handleAddTodoToProcessing(TEMP_ID);
     setTempTodo({ id: TEMP_ID, ...newTodo });
 
@@ -104,9 +123,7 @@ export const useTodos = () => {
         completed: !todoToUpdate.completed,
       });
 
-      setTodos(current =>
-        current.map(todo => (todo.id === todoId ? updatedTodo : todo)),
-      );
+      replaceTodoInList(updatedTodo);
     } catch (error) {
       handleErrors(error, TodoServiceErrors.UnableToUpdate);
     } finally {
@@ -126,9 +143,7 @@ export const useTodos = () => {
     try {
       const updatedTodo = await updateTodo(todoId, { title: newTitle });
 
-      setTodos(current =>
-        current.map(todo => (todo.id === todoId ? updatedTodo : todo)),
-      );
+      replaceTodoInList(updatedTodo);
     } catch (error) {
       handleErrors(error, TodoServiceErrors.UnableToUpdate);
       throw error;
@@ -139,7 +154,6 @@ export const useTodos = () => {
 
   const handleToggleAllTodos = async () => {
     const status = !allTodosCompleted;
-
     const todosToUpdate = todos.filter(todo => todo.completed !== status);
 
     try {
@@ -152,11 +166,7 @@ export const useTodos = () => {
               completed: status,
             });
 
-            setTodos(current =>
-              current.map(currTodo =>
-                currTodo.id === todo.id ? updatedTodo : currTodo,
-              ),
-            );
+            replaceTodoInList(updatedTodo);
           } catch (error) {
             handleErrors(error, TodoServiceErrors.UnableToUpdate);
           } finally {
@@ -170,19 +180,15 @@ export const useTodos = () => {
   };
 
   const handleClearCompleted = async () => {
-    const todosToRemove = todos.filter(todo => todo.completed);
+    const completedTodos = todos.filter(todo => todo.completed);
 
-    todosToRemove.forEach(({ id }) => handleAddTodoToProcessing(id));
+    completedTodos.forEach(({ id }) => handleAddTodoToProcessing(id));
 
     const results = await Promise.allSettled(
-      todosToRemove.map(todo => deleteTodo(todo.id)),
+      completedTodos.map(todo => deleteTodo(todo.id)),
     );
 
-    const successfulIds = results
-      .map((result, index) =>
-        result.status === 'fulfilled' ? todosToRemove[index].id : null,
-      )
-      .filter((id): id is number => id !== null);
+    const successfulIds = getSuccessfulIds(results, completedTodos);
 
     setTodos(current =>
       current.filter(todo => !successfulIds.includes(todo.id)),
@@ -192,7 +198,7 @@ export const useTodos = () => {
       setErrorMessage(TodoServiceErrors.UnableToDelete);
     }
 
-    todosToRemove.forEach(({ id }) => handleRemoveTodoFromProcessing(id));
+    completedTodos.forEach(({ id }) => handleRemoveTodoFromProcessing(id));
     inputFocusRef.current?.();
   };
 
@@ -206,6 +212,7 @@ export const useTodos = () => {
     processingTodoIds,
     tempTodo,
     inputFocusRef,
+    TEMP_ID,
     setTodos,
     setErrorMessage,
     setInitialLoading,
