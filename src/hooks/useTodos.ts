@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Todo } from '../types/Todo';
-import { addTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
+import {
+  TEMP_ID,
+  addTodo,
+  deleteTodo,
+  getTodos,
+  updateTodo,
+} from '../api/todos';
 import { TodoError, TodoServiceErrors } from '../types/Errors';
 import { TodoAgregate } from '../types/TodoAgregate';
 import { getSuccessfulIds } from '../utils/getSuccessfulIds';
+import { TodoFormRef } from '../components/TodoForm/TodoForm';
 
 export const useTodos = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -11,9 +18,7 @@ export const useTodos = () => {
   const [initialLoading, setInitialLoading] = useState(false);
   const [processingTodoIds, setProcessingTodoIds] = useState<Todo['id'][]>([]);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const inputFocusRef = useRef<() => void>(() => {});
-
-  const TEMP_ID = 0;
+  const inputFocusRef = useRef<TodoFormRef>(null);
 
   const allTodosCompleted = useMemo(
     () => todos.every(todo => todo.completed),
@@ -99,7 +104,7 @@ export const useTodos = () => {
       try {
         await deleteTodo(todoId);
         setTodos(current => current.filter(todo => todo.id !== todoId));
-        inputFocusRef.current?.();
+        inputFocusRef.current?.focus();
       } catch (error) {
         handleErrors(error, TodoServiceErrors.UnableToDelete);
       } finally {
@@ -109,6 +114,25 @@ export const useTodos = () => {
     [handleErrors],
   );
 
+  const handlePartialTodoUpdate = async (
+    todoId: Todo['id'],
+    fieldsToUpdate: Partial<Pick<Todo, 'title' | 'completed'>>,
+    fallbackError: TodoError = TodoServiceErrors.UnableToUpdate,
+  ): Promise<void> => {
+    handleAddTodoToProcessing(todoId);
+
+    try {
+      const updatedTodo = await updateTodo(todoId, fieldsToUpdate);
+
+      replaceTodoInList(updatedTodo);
+    } catch (error) {
+      handleErrors(error, fallbackError);
+      throw error;
+    } finally {
+      handleRemoveTodoFromProcessing(todoId);
+    }
+  };
+
   const handleToggleTodo = async (todoId: Todo['id']) => {
     const todoToUpdate = todos.find(todo => todo.id === todoId);
 
@@ -116,19 +140,9 @@ export const useTodos = () => {
       return;
     }
 
-    handleAddTodoToProcessing(todoId);
-
-    try {
-      const updatedTodo = await updateTodo(todoId, {
-        completed: !todoToUpdate.completed,
-      });
-
-      replaceTodoInList(updatedTodo);
-    } catch (error) {
-      handleErrors(error, TodoServiceErrors.UnableToUpdate);
-    } finally {
-      handleRemoveTodoFromProcessing(todoId);
-    }
+    await handlePartialTodoUpdate(todoId, {
+      completed: !todoToUpdate.completed,
+    });
   };
 
   const handleUpdateTodo = async (todoId: Todo['id'], newTitle: string) => {
@@ -138,45 +152,20 @@ export const useTodos = () => {
       return;
     }
 
-    handleAddTodoToProcessing(todoId);
-
-    try {
-      const updatedTodo = await updateTodo(todoId, { title: newTitle });
-
-      replaceTodoInList(updatedTodo);
-    } catch (error) {
-      handleErrors(error, TodoServiceErrors.UnableToUpdate);
-      throw error;
-    } finally {
-      handleRemoveTodoFromProcessing(todoId);
-    }
+    await handlePartialTodoUpdate(todoId, {
+      title: newTitle.trim(),
+    });
   };
 
   const handleToggleAllTodos = async () => {
     const status = !allTodosCompleted;
     const todosToUpdate = todos.filter(todo => todo.completed !== status);
 
-    try {
-      await Promise.all(
-        todosToUpdate.map(async todo => {
-          handleAddTodoToProcessing(todo.id);
-
-          try {
-            const updatedTodo = await updateTodo(todo.id, {
-              completed: status,
-            });
-
-            replaceTodoInList(updatedTodo);
-          } catch (error) {
-            handleErrors(error, TodoServiceErrors.UnableToUpdate);
-          } finally {
-            handleRemoveTodoFromProcessing(todo.id);
-          }
-        }),
-      );
-    } catch (error) {
-      handleErrors(error, TodoServiceErrors.UnableToUpdate);
-    }
+    await Promise.all(
+      todosToUpdate.map(todo =>
+        handlePartialTodoUpdate(todo.id, { completed: status }),
+      ),
+    );
   };
 
   const handleClearCompleted = async () => {
@@ -199,7 +188,7 @@ export const useTodos = () => {
     }
 
     completedTodos.forEach(({ id }) => handleRemoveTodoFromProcessing(id));
-    inputFocusRef.current?.();
+    inputFocusRef.current?.focus();
   };
 
   return {
@@ -212,7 +201,6 @@ export const useTodos = () => {
     processingTodoIds,
     tempTodo,
     inputFocusRef,
-    TEMP_ID,
     setTodos,
     setErrorMessage,
     setInitialLoading,

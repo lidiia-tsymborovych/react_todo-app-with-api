@@ -1,6 +1,6 @@
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import { UserWarning } from './UserWarning';
-import { USER_ID } from './api/todos';
+import { TEMP_ID, USER_ID } from './api/todos';
 import { ErrorNotification } from './components/TodoErrorNotification';
 import { useTodos } from './hooks/useTodos';
 import { useFilteredTodos } from './hooks/useFilteredTodos';
@@ -22,7 +22,6 @@ export const App: React.FC = () => {
     processingTodoIds,
     tempTodo,
     inputFocusRef,
-    TEMP_ID,
     setErrorMessage,
     handleDeleteTodo,
     handleAddTodo,
@@ -68,10 +67,10 @@ export const App: React.FC = () => {
           )}
 
           <TodoForm
+            ref={inputFocusRef}
             onSubmit={handleAddTodo}
             setErrorMessage={setErrorMessage}
             isLoading={loading(TEMP_ID)}
-            inputFocusRef={inputFocusRef}
           />
         </header>
 
