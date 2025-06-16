@@ -10,6 +10,7 @@ import { TodoFooterNav } from './components/TodoFooterNav/TodoFooterNav';
 import { ClearCompletedBtn } from './components/ClearCompletedBtn';
 import { TodoItem } from './components/TodoItem';
 import React, { useRef } from 'react';
+import { useNodeRefs } from './hooks/useNodeRefs';
 
 export const App: React.FC = () => {
   const {
@@ -33,20 +34,12 @@ export const App: React.FC = () => {
 
   const { visibleTodos, filterParam, setFilterParam } = useFilteredTodos(todos);
 
-  const resetError = () => setErrorMessage(null);
   const todoListIsNotEmpty = todos.length > 0;
+
+  const resetError = () => setErrorMessage(null);
   const loading = (id: number) => processingTodoIds.includes(id);
 
-  const nodeRefs = useRef(new Map<number, React.RefObject<HTMLDivElement>>());
-
-  const getNodeRef = (id: number) => {
-    if (!nodeRefs.current.has(id)) {
-      nodeRefs.current.set(id, React.createRef<HTMLDivElement>());
-    }
-
-    return nodeRefs.current.get(id)!;
-  };
-
+  const nodeRef = useNodeRefs();
   const tempNodeRef = useRef<HTMLDivElement>(null);
 
   if (!USER_ID) {
@@ -83,7 +76,7 @@ export const App: React.FC = () => {
                   timeout={300}
                   classNames="item"
                   appear
-                  nodeRef={getNodeRef(todo.id)}
+                  nodeRef={nodeRef(todo.id)}
                 >
                   <TodoItem
                     todo={todo}
@@ -92,7 +85,7 @@ export const App: React.FC = () => {
                     onToggle={handleToggleTodo}
                     onUpdate={handleUpdateTodo}
                     setError={setErrorMessage}
-                    nodeRef={getNodeRef(todo.id)}
+                    nodeRef={nodeRef(todo.id)}
                   />
                 </CSSTransition>
               ))}

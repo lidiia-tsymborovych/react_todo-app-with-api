@@ -74,7 +74,6 @@ export const TodoForm = forwardRef<TodoFormRef, TodoFormProps>(
           onChange={handleInputChange}
           disabled={isLoading}
           data-cy="NewTodoField"
-          autoFocus
         />
       </form>
     );

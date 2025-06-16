@@ -26,7 +26,6 @@ const TodoItemComponent = ({
   const [isEditing, setIsEditing] = useState(false);
   const [updatedTitle, setUpdatedTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const skipBlurRef = useRef(false);
 
   const handleDelete = async () => {
     try {
@@ -69,7 +68,6 @@ const TodoItemComponent = ({
   ) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      skipBlurRef.current = true;
       await handleFinishEditing(updatedTitle);
     }
 
@@ -80,12 +78,6 @@ const TodoItemComponent = ({
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-    if (skipBlurRef.current) {
-      skipBlurRef.current = false;
-
-      return;
-    }
-
     handleFinishEditing(event.currentTarget.value);
   };
 
@@ -141,6 +133,7 @@ const TodoItemComponent = ({
           type="button"
           className="todo__remove"
           data-cy="TodoDelete"
+          onMouseDown={e => e.preventDefault()}
           onClick={handleDelete}
         >
           ×
