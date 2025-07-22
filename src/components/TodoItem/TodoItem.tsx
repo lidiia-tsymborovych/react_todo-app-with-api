@@ -119,25 +119,25 @@ const TodoItemComponent = ({
           onKeyDown={handleKeyDown}
         />
       ) : (
-        <span
-          data-cy="TodoTitle"
-          className="todo__title"
-          onDoubleClick={() => setIsEditing(true)}
-        >
-          {todo.title}
-        </span>
-      )}
+        <>
+          <span
+            data-cy="TodoTitle"
+            className="todo__title"
+            onDoubleClick={() => setIsEditing(true)}
+          >
+            {todo.title}
+          </span>
 
-      {!isEditing && (
-        <button
-          type="button"
-          className="todo__remove"
-          data-cy="TodoDelete"
-          onMouseDown={e => e.preventDefault()}
-          onClick={handleDelete}
-        >
-          ×
-        </button>
+          <button
+            type="button"
+            className="todo__remove"
+            data-cy="TodoDelete"
+            onMouseDown={e => e.preventDefault()}
+            onClick={handleDelete}
+          >
+            ×
+          </button>
+        </>
       )}
 
       <div
