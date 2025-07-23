@@ -1,50 +1,80 @@
-# React Todo App with API (complete)
+# React Todo App with API
 
-It is the third part of the React Todo App with API.
+This is a multi-stage Todo application built with React and TypeScript, designed to interact with a backend API to manage todos in real-time. The project is split into three parts, each adding incremental features and improving the user experience.
 
-Take your code implemented for [Add and Delete](https://github.com/mate-academy/react_todo-app-add-and-delete)
-and implement the ability to toggle and rename todos.
+---
 
-> Here is [the working example](https://mate-academy.github.io/react_todo-app-with-api/)
+## Project Overview
 
-## Toggling a todo status
+The app allows users to:
 
-Toggle the `completed` status on `TodoStatus` change:
-- Install Prettier Extention and use this [VSCode settings](https://mate-academy.github.io/fe-program/tools/vscode/settings.json) to enable format on save.
-- covered the todo with a loader overlay while waiting for API response;
-- the status should be changed on success;
-- show the `Unable to update a todo` notification in case of API error.
+- Load todos from the API based on a user ID  
+- Add new todos and delete existing ones  
+- Toggle todo completion status and rename todos  
 
-Add the ability to toggle the completed status of all the todos with the `toggleAll` checkbox:
+It emphasizes simplicity, responsiveness, and robust error handling to ensure smooth user interactions.
 
-- `toggleAll` button should have `active` class only if all the todos are completed;
-- `toggleAll` click changes its status to the opposite one, and sets this new status to all the todos;
-- it should work the same as several individual updates of the todos which statuses were actually changed;
-- don't send requests for the todos that were not changed;
+---
 
-## Renaming a todo
+## Features by Part
 
-Implement the ability to edit a todo title on double click:
+### Part 1: Load Todos
 
-- show the edit form instead of the title and remove button;
-- saves changes on the form submit (just press `Enter`);
-- save changes when the field loses focus (`onBlur`);
-- if the new title is the same as the old one just cancel editing;
-- cancel editing on `Esс` key `keyup` event;
-- if the new title is empty delete the todo the same way the `x` button does it;
-- if the title was changed show the loader while waiting for the API response;
-- update the todo title on success;
-- show `Unable to update a todo` in case of API error;
-- or the deletion error message if we tried to delete the todo.
+- Fetch todos from API using user ID (which you register via email)
+- Display todos with status filtering (All / Active / Completed)
+- Show error notifications on API failures, auto-hide after 3 seconds
+- Disable or hide UI elements when no todos exist
+- Focus input fields automatically for faster typing
+- Show loading spinners for ongoing API actions
 
-## If you want to enable tests
-- open `cypress/integration/page.spec.js`
-- replace `describe.skip` with `describe` for the root `describe`
+### Part 2: Add and Delete Todos
 
-> ❗❗All tests should pass, even if some behaviour is not well explained in the task❗❗
+- Add todos with trimmed titles via form submit
+- Disable input and show loading indicator while saving new todos
+- Handle API errors with notifications and input state management
+- Delete single todos with loading overlays until confirmed by API
+- Bulk delete all completed todos with parallel API calls
+- Enable/disable clear button depending on completed todos count
 
-## Instructions
+### Part 3: Toggle and Rename Todos
 
-- Implement a solution following the [React task guideline](https://github.com/mate-academy/react_task-guideline#react-tasks-guideline).
-- Use the [React TypeScript cheat sheet](https://mate-academy.github.io/fe-program/js/extra/react-typescript).
-- Replace `<your_account>` with your Github username in the [DEMO LINK](https://<your_account>.github.io/react_todo-app-with-api/) and add it to the PR description.
+- Toggle individual todo completion status with loading states
+- Toggle all todos at once via a master toggle checkbox
+- Rename todos inline on double-click, with editing cancel/save behaviors
+- Delete todos by clearing title during rename or via delete button
+- Show notifications on update or deletion errors
+- Avoid unnecessary API calls for unchanged todos
+
+---
+
+## Technologies Used
+
+- **React** — UI library for building interactive components  
+- **TypeScript** — typed JavaScript for safer and more maintainable code  
+- **React Hooks** — for state management and lifecycle  
+- **fetch API / custom fetchClient** — for server communication  
+- **Prettier** — code formatter to maintain consistent style  
+- **Cypress** — end-to-end testing framework (tests provided)  
+
+---
+
+## Getting Started
+
+1. **Clone the repository:**
+   git clone <your_repository_address>
+   cd react-todo-app
+2. Install dependencies:
+   npm install
+   Register your user:
+
+3. Register your email to get a userId (follow the API instructions)
+
+4.Update api/todos.ts with your userId to load your todos
+
+5. Run the app:
+   npm start
+
+#Try it live
+
+Demo: [(https://lidiia-tsymborovych.github.io/react_todo-app-with-api/)]
+
